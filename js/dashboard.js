@@ -57,6 +57,34 @@ function mostrarDashboard() {
             </div>
         </div>
         
+                <!-- Acordeón de Gastos Fijos -->
+        <div class="accordion mb-4" id="acordeon-gastos-fijos">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-gastos-fijos">
+                        Gastos Fijos Configurados (${datos.perfil.gastosFijos.length})
+                    </button>
+                </h2>
+                <div id="collapse-gastos-fijos" class="accordion-collapse collapse" data-bs-parent="#acordeon-gastos-fijos">
+                    <div class="accordion-body">
+                        ${datos.perfil.gastosFijos.map((gasto, index) => `
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>
+                                    <strong>${gasto.concepto}</strong>
+                                    <div class="text-muted small">
+                                        Total: $${formatearMoneda(gasto.monto)}
+                                        ${gasto.esCompartido ? `| Tu pago: $${formatearMoneda(gasto.montoReal)}` : ''}
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editarGastoFijo(${index})">
+                                    Editar
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
             <!-- Balance Actual -->
             <div class="alert ${balanceActual >= 0 ? 'alert-success' : 'alert-danger'} mb-4">
                 <h4 class="alert-heading">
@@ -233,5 +261,105 @@ function eliminarGastoDiario(id) {
     
     localStorage.setItem("datosFinancieros", JSON.stringify(datos));
     
+    mostrarDashboard();
+}
+
+// Función para editar un gasto fijo
+function editarGastoFijo(index) {
+    const datos = JSON.parse(localStorage.getItem("datosFinancieros"));
+    const gasto = datos.perfil.gastosFijos[index];
+    
+    // Mostrar modal con formulario de edición
+    const modalHTML = `
+        <div class="modal fade" id="modal-editar-gasto" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Gasto Fijo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Concepto</label>
+                            <input type="text" id="edit-concepto" class="form-control" value="${gasto.concepto}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Monto Total</label>
+                            <input type="number" id="edit-monto" class="form-control" value="${gasto.monto}">
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="edit-compartido" ${gasto.esCompartido ? 'checked' : ''}>
+                            <label class="form-check-label">Es compartido</label>
+                        </div>
+                        <div id="edit-opciones-compartido" style="display: ${gasto.esCompartido ? 'block' : 'none'};">
+                            <div class="mb-3">
+                                <label class="form-label">Porcentaje Personal</label>
+                                <input type="number" id="edit-porcentaje" class="form-control" value="${gasto.porcentajePersonal || ''}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Número de Personas</label>
+                                <input type="number" id="edit-personas" class="form-control" value="${gasto.numeroPersonas || ''}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="btn btn-primary" onclick="guardarEdicionGasto(${index})">Guardar Cambios</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHTML;
+    document.body.appendChild(modalContainer);
+    
+    const modal = new bootstrap.Modal(document.getElementById('modal-editar-gasto'));
+    modal.show();
+    
+    document.getElementById('edit-compartido').addEventListener('change', function() {
+        const opciones = document.getElementById('edit-opciones-compartido');
+        opciones.style.display = this.checked ? 'block' : 'none';
+    });
+}
+
+function guardarEdicionGasto(index) {
+    const datos = JSON.parse(localStorage.getItem("datosFinancieros"));
+    
+    const concepto = document.getElementById('edit-concepto').value.trim();
+    const monto = parseFloat(document.getElementById('edit-monto').value);
+    const esCompartido = document.getElementById('edit-compartido').checked;
+    const porcentaje = parseFloat(document.getElementById('edit-porcentaje').value);
+    const personas = parseInt(document.getElementById('edit-personas').value);
+    
+    if (!concepto || !monto || monto <= 0) {
+        alert("Datos inválidos");
+        return;
+    }
+    
+    let montoReal = monto;
+    if (esCompartido) {
+        if (porcentaje) {
+            montoReal = monto * (porcentaje / 100);
+        } else if (personas) {
+            montoReal = monto / personas;
+        }
+    }
+    
+    datos.perfil.gastosFijos[index] = {
+        ...datos.perfil.gastosFijos[index],
+        concepto,
+        monto,
+        esCompartido,
+        porcentajePersonal: porcentaje || null,
+        numeroPersonas: personas || null,
+        montoReal
+    };
+    
+    localStorage.setItem("datosFinancieros", JSON.stringify(datos));
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modal-editar-gasto'));
+    modal.hide();
     mostrarDashboard();
 }
