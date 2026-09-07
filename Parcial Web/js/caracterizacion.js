@@ -164,6 +164,25 @@ function agregarGastoFijo() {
     const esCompartido = document.getElementById("gasto-compartido").checked;
     const porcentajePersonal = parseFloat(document.getElementById("porcentaje-personal").value);
     const numeroPersonas = parseInt(document.getElementById("numero-personas").value);
+
+
+
+    if (esCompartido) {
+        if (!porcentajePersonal && !numeroPersonas) {
+            alert("Debes indicar el porcentaje personal o el número de personas");
+            return;
+        }
+        
+        if (porcentajePersonal && (porcentajePersonal <= 0 || porcentajePersonal > 100)) {
+            alert("El porcentaje debe estar entre 1 y 100");
+            return;
+        }
+        
+        if (numeroPersonas && numeroPersonas <= 0) {
+            alert("El número de personas debe ser mayor a 0");
+            return;
+        }
+    }
     
     if (!concepto || !monto || monto <= 0) {
         alert("Por favor ingresa un concepto y un monto válido");
